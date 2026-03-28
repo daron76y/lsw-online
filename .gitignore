@@ -1,0 +1,3 @@
+# Project exclude paths
+/lsw-client/target/
+/lsw-core/target/

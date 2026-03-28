@@ -1,0 +1,18 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: party-service
+
+# Party-service is stateless — it performs operations on Party objects
+# passed in via the request body and returns the modified party.
+# All persistence is delegated to user-service.
+services:
+  user-url: ${USER_SERVICE_URL:http://localhost:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

@@ -1,0 +1,68 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: lsw-gateway
+
+  cloud:
+    gateway:
+      # Global CORS — allows the JavaFX client (and any browser dev tools) to reach the gateway
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+      routes:
+        # ── User & Auth Service (port 8081) ───────────────────────────────────
+        - id: auth-route
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**
+
+        - id: user-route
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/users/**
+
+        # ── Party Service (port 8082) ─────────────────────────────────────────
+        - id: party-route
+          uri: ${PARTY_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/parties/**
+
+        # ── Campaign Service (port 8083) ──────────────────────────────────────
+        - id: campaign-route
+          uri: ${CAMPAIGN_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/campaign/**
+
+        # ── Battle Service (port 8084) ────────────────────────────────────────
+        - id: battle-route
+          uri: ${BATTLE_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/battle/**
+
+        # ── PvP Service (port 8085) ───────────────────────────────────────────
+        - id: pvp-route
+          uri: ${PVP_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/pvp/**
+
+# Actuator — exposes /actuator/health for Docker health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always
+
+# Log routed requests at DEBUG for development; set to INFO in production
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG

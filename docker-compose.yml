@@ -1,0 +1,164 @@
+services:
+  #sql ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: lsw-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-lsw_password}
+      MYSQL_DATABASE: lsw_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-lsw_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  #user service ========================================
+  user-service:
+    build:
+      context: .
+      dockerfile: lsw-user-service/Dockerfile
+    container_name: lsw-user-service
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-lsw_password}
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  #party service ================================================
+  party-service:
+    build:
+      context: .
+      dockerfile: lsw-party-service/Dockerfile
+    container_name: lsw-party-service
+    environment:
+      USER_SERVICE_URL: http://user-service:8081
+    ports:
+      - "8082:8082"
+    depends_on:
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  #campaign service ==============================================
+  campaign-service:
+    build:
+      context: .
+      dockerfile: lsw-campaign-service/Dockerfile
+    container_name: lsw-campaign-service
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-lsw_password}
+      BATTLE_SERVICE_URL: http://battle-service:8084
+      USER_SERVICE_URL:   http://user-service:8081
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      battle-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  #battle service ======================================================
+  battle-service:
+    build:
+      context: .
+      dockerfile: lsw-battle-service/Dockerfile
+    container_name: lsw-battle-service
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-lsw_password}
+    ports:
+      - "8084:8084"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  #pvp service ===================================================================
+  pvp-service:
+    build:
+      context: .
+      dockerfile: lsw-pvp-service/Dockerfile
+    container_name: lsw-pvp-service
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-lsw_password}
+      BATTLE_SERVICE_URL: http://battle-service:8084
+      USER_SERVICE_URL:   http://user-service:8081
+    ports:
+      - "8085:8085"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      battle-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  #api gateway ==========================================================
+  gateway:
+    build:
+      context: .
+      dockerfile: lsw-gateway/Dockerfile
+    container_name: lsw-gateway
+    environment:
+      USER_SERVICE_URL:     http://user-service:8081
+      PARTY_SERVICE_URL:    http://party-service:8082
+      CAMPAIGN_SERVICE_URL: http://campaign-service:8083
+      BATTLE_SERVICE_URL:   http://battle-service:8084
+      PVP_SERVICE_URL:      http://pvp-service:8085
+    ports:
+      - "8080:8080" #port for the GUI client to read from
+    depends_on:
+      user-service:
+        condition: service_healthy
+      party-service:
+        condition: service_healthy
+      campaign-service:
+        condition: service_healthy
+      battle-service:
+        condition: service_healthy
+      pvp-service:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+    driver: local
