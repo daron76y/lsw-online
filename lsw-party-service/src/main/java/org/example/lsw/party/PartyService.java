@@ -79,8 +79,8 @@ public class PartyService {
 
         //use the item
         party.removeItem(item);
-        unit.setHealth(Math.min(unit.getHealth() + item.getHealthBoost(), unit.getMaxHealth()));
-        unit.setMana(Math.min(unit.getMana() + item.getManaBoost(), unit.getMaxMana()));
+        unit.setHealth(Math.min(Math.max(unit.getHealth() + item.getHealthBoost(), unit.getMaxHealth()), unit.getMaxHealth()));
+        unit.setMana(Math.min(Math.max(unit.getMana() + item.getManaBoost(), unit.getMaxMana()), unit.getMaxMana()));
 
         messages.add(unit.getName() + " used " + item + ".");
         messages.add(unit.toString());
