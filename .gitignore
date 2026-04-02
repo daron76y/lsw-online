@@ -1,2 +1,25 @@
-# Ignore all Maven build outputs
+# ignore build outputs
 **/target/
+
+# IDEs
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+logs/
+tmp/
+*.tmp
+
+# Java artifacts (extra safety)
+*.class
+*.jar
