@@ -2,9 +2,9 @@ name: CI-CD
 
 on:
   pull_request:
-    branches: [master, main]
+    branches: [master]
   push:
-    branches: [master, main]
+    branches: [master]
     tags:
       - "v*"
 
@@ -121,7 +121,7 @@ jobs:
           short_sha="${GITHUB_SHA::7}"
           tags="${repo}:sha-${short_sha}"
 
-          if [[ "${GITHUB_REF}" == "refs/heads/master" || "${GITHUB_REF}" == "refs/heads/main" ]]; then
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
             tags="${tags},${repo}:latest"
           fi
 
