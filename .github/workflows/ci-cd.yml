@@ -1,0 +1,143 @@
+name: CI-CD
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+    tags:
+      - "v*"
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "21"
+
+jobs:
+  maven-tests:
+    name: Maven Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Run tests
+        run: mvn -B -ntp test
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: |
+            **/target/surefire-reports/*.xml
+            **/target/surefire-reports/*.txt
+          if-no-files-found: ignore
+
+  compose-system-tests:
+    name: Docker Compose System Tests
+    runs-on: ubuntu-latest
+    needs: maven-tests
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and start stack
+        run: docker compose -f docker-compose.yml up --build -d
+
+      - name: Run smoke tests
+        run: ./ci/smoke-test-compose.sh
+
+      - name: Show compose status
+        if: always()
+        run: docker compose -f docker-compose.yml ps
+
+      - name: Print compose logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml logs --no-color --tail=200
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose -f docker-compose.yml down -v --remove-orphans
+
+  publish-images:
+    name: Publish Docker Images
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: [maven-tests, compose-system-tests]
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: lsw-user-service
+            dockerfile: lsw-user-service/Dockerfile
+          - image_name: lsw-party-service
+            dockerfile: lsw-party-service/Dockerfile
+          - image_name: lsw-campaign-service
+            dockerfile: lsw-campaign-service/Dockerfile
+          - image_name: lsw-battle-service
+            dockerfile: lsw-battle-service/Dockerfile
+          - image_name: lsw-pvp-service
+            dockerfile: lsw-pvp-service/Dockerfile
+          - image_name: lsw-gateway
+            dockerfile: lsw-gateway/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: tags
+        run: |
+          repo="ghcr.io/${{ github.repository_owner }}/${{ matrix.image_name }}"
+          short_sha="${GITHUB_SHA::7}"
+          tags="${repo}:sha-${short_sha}"
+
+          if [[ "${GITHUB_REF}" == "refs/heads/master" || "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            tags="${tags},${repo}:latest"
+          fi
+
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tag_name="${GITHUB_REF#refs/tags/}"
+            tags="${tags},${repo}:${tag_name}"
+          fi
+
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
