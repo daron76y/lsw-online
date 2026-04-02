@@ -1,5 +1,2 @@
-# Project exclude paths
-/lsw-client/target/
-/lsw-core/target/
 # Ignore all Maven build outputs
 **/target/
