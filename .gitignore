@@ -9,6 +9,7 @@
 .classpath
 .project
 .settings/
+.idea
 
 # OS
 .DS_Store
