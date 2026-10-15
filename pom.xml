@@ -28,6 +28,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>3.2.3</spring-boot.version>
         <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <argLine></argLine>
     </properties>
 
     <dependencyManagement>
@@ -87,5 +88,26 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <!-- Expose ${net.bytebuddy:byte-buddy-agent:jar} so the Byte Buddy agent used by Mockito can be loaded as a -javaagent at JVM
+                 startup; runtime self-attach fails on some CI JDKs. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>bytebuddy-agent-path</id>
+                        <goals><goal>properties</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} -javaagent:${net.bytebuddy:byte-buddy-agent:jar} -XX:+EnableDynamicAgentLoading -Xshare:off</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>
