@@ -10,7 +10,6 @@ import org.example.lsw.core.HeroClass;
 import org.example.lsw.core.UnitFactoryCSV;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * New campaign setup screen.
