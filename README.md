@@ -148,3 +148,5 @@ GitHub Push/PR/Tag
 - `pull_request` targeting the `master` branch.
 - `push` to the `master` branch.
 - `push` of tags matching `v*` (semantic-release style tags trigger image tagging).
+
+yolo!
