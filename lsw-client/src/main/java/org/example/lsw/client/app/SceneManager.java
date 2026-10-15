@@ -6,7 +6,6 @@ import javafx.stage.Stage;
 import org.example.lsw.client.api.ApiClient;
 import org.example.lsw.client.api.ApiException;
 import org.example.lsw.client.api.ClientSession;
-import org.example.lsw.core.GameMapper;
 import org.example.lsw.core.HeroClass;
 import org.example.lsw.core.Items;
 import org.example.lsw.core.Party;

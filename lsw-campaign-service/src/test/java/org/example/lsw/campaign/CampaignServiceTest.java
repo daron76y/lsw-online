@@ -1,7 +1,6 @@
 package org.example.lsw.campaign;
 
 import org.example.lsw.core.*;
-import org.example.lsw.core.battle.BattleState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
